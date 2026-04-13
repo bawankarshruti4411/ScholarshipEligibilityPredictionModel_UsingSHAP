@@ -44,8 +44,9 @@ DEFAULT_WEIGHTS = {
     "class_8":  0.10,
     "class_9":  0.10,
     "class_10": 0.25,
-    "class_11": 0.25,
-    "class_12": 0.30,
+    "class_11": 0.15,
+    "class_12": 0.20,
+    "CGPA":     0.20,
 }
 
 # Default category bonus points (mirrors train_model.py)
@@ -92,7 +93,7 @@ def parse_weights(raw: Optional[Dict]) -> Dict[str, float]:
     if not raw:
         return dict(DEFAULT_WEIGHTS)
 
-    required_keys = {"class_8", "class_9", "class_10", "class_11", "class_12"}
+    required_keys = {"class_8", "class_9", "class_10", "class_11", "class_12", "CGPA"}
     missing = required_keys - set(raw.keys())
     if missing:
         raise ValueError(f"Weight keys missing: {sorted(missing)}")
@@ -129,8 +130,8 @@ def parse_category_bonuses(raw: Optional[Dict]) -> Dict[str, float]:
 def compute_academic_score(pcts: Dict[str, float], weights: Dict[str, float]) -> float:
     """
     Weighted average of five grade percentages.
-    pcts keys: class_8_pct, class_9_pct, class_10_pct, class_11_pct, class_12_pct
-    weights keys: class_8, class_9, class_10, class_11, class_12
+    pcts keys: class_8_pct, class_9_pct, class_10_pct, class_11_pct, class_12_pct , CGPA_pct
+    weights keys: class_8, class_9, class_10, class_11, class_12, CGPA
     Returns a value in [0, 100].
     """
     score = (
@@ -139,13 +140,14 @@ def compute_academic_score(pcts: Dict[str, float], weights: Dict[str, float]) ->
         + pcts["class_10_pct"] * weights["class_10"]
         + pcts["class_11_pct"] * weights["class_11"]
         + pcts["class_12_pct"] * weights["class_12"]
+        + pcts["CGPA_pct"] * weights["CGPA"]
     )
     return float(np.clip(score, 0, 100))
 
 
 def validate_percentages(data: Dict) -> Dict[str, float]:
     """Extract and validate the five grade percentage fields."""
-    pct_keys = ["class_8_pct", "class_9_pct", "class_10_pct", "class_11_pct", "class_12_pct"]
+    pct_keys = ["class_8_pct", "class_9_pct", "class_10_pct", "class_11_pct", "class_12_pct","CGPA_pct"]
     pcts = {}
     errors = []
     for key in pct_keys:
@@ -233,7 +235,7 @@ def encode_input(data: Dict, pcts: Dict[str, float], academic_score: float, meta
     return np.array([
         gender_val, location_val, category_val,
         pcts["class_8_pct"], pcts["class_9_pct"], pcts["class_10_pct"],
-        pcts["class_11_pct"], pcts["class_12_pct"],
+        pcts["class_11_pct"], pcts["class_12_pct"],pcts["CGPA_pct"],
         academic_score,
         income, age,
     ])
@@ -313,6 +315,7 @@ def predict():
       "class_10_pct":   0–100,
       "class_11_pct":   0–100,
       "class_12_pct":   0–100,
+      "CGPA_pct":       0-100,
       "parents_income": 20000–300000,
       "age":            18–30,
       "weights": {                     ← optional grade weights (normalised if ≠ 1)
@@ -344,7 +347,7 @@ def predict():
 
     required = [
         "gender", "location", "category",
-        "class_8_pct", "class_9_pct", "class_10_pct", "class_11_pct", "class_12_pct",
+        "class_8_pct", "class_9_pct", "class_10_pct", "class_11_pct", "class_12_pct","CGPA_pct",
         "parents_income", "age",
     ]
     missing = [k for k in required if k not in body]
@@ -421,7 +424,7 @@ def batch_predict():
 
     CSV must have columns:
         gender, location, category,
-        class_8_pct, class_9_pct, class_10_pct, class_11_pct, class_12_pct,
+        class_8_pct, class_9_pct, class_10_pct, class_11_pct, class_12_pct,CGPA_pct,
         parents_income, age
 
     Optional form fields (JSON strings):
@@ -470,6 +473,7 @@ def batch_predict():
                 "class_10_pct":   float(row_lower.get("class_10_pct", 60)),
                 "class_11_pct":   float(row_lower.get("class_11_pct", 60)),
                 "class_12_pct":   float(row_lower.get("class_12_pct", 60)),
+                "CGPA_pct":   float(row_lower.get("CGPA_pct", 7)),
                 "parents_income": float(row_lower.get("parents_income", 150000)),
                 "age":            float(row_lower.get("age", 22)),
             }

@@ -17,8 +17,9 @@ DEFAULT_WEIGHTS = {
     "class_8":  0.10,   # 8th grade percentage
     "class_9":  0.10,   # 9th grade percentage
     "class_10": 0.25,   # 10th grade percentage (board exam — higher weight)
-    "class_11": 0.25,   # 11th grade percentage
-    "class_12": 0.30,   # 12th grade percentage (most recent — highest weight)
+    "class_11": 0.10,   # 11th grade percentage
+    "class_12": 0.20,   # 12th grade percentage 
+    "CGPA":     0.25,   # cgpa grade percentage (most recent — highest weight)
 }
 
 # Default bonus points added to the eligibility score for each reservation category.
@@ -52,6 +53,7 @@ def compute_academic_score(row, weights=None):
         + row.get("class_10_pct", row.get("CGPA", 70) * 10) * weights["class_10"]
         + row.get("class_11_pct", row.get("CGPA", 70) * 10) * weights["class_11"]
         + row.get("class_12_pct", row.get("CGPA", 70) * 10) * weights["class_12"]
+        + row.get("CGPA_pct", row.get("CGPA", 70) * 10) * weights["CGPA"]
     )
     # Clamp to [0, 100]
     return float(np.clip(score, 0, 100))
@@ -98,7 +100,7 @@ def load_and_prepare(path: str, weights=None, category_bonuses=None):
     # If the dataset only has CGPA, derive approximate percentages by mapping
     # CGPA (0-10) → percentage (0-100) with minor random variation per grade
     # to simulate realistic variance. Replace this block once real data is available.
-    grade_cols = ["class_8_pct", "class_9_pct", "class_10_pct", "class_11_pct", "class_12_pct"]
+    grade_cols = ["class_8_pct", "class_9_pct", "class_10_pct", "class_11_pct", "class_12_pct","CGPA_pct"]
     for col in grade_cols:
         if col not in df.columns:
             base = df["CGPA"] * 10  # CGPA 7.5 → ~75%
@@ -122,13 +124,13 @@ def load_and_prepare(path: str, weights=None, category_bonuses=None):
 
     feature_cols = [
         "gender_enc", "location_enc", "category_enc",
-        "class_8_pct", "class_9_pct", "class_10_pct", "class_11_pct", "class_12_pct",
+        "class_8_pct", "class_9_pct", "class_10_pct", "class_11_pct", "class_12_pct","CGPA_pct",
         "academic_score",
         "Parents_Income", "Age",
     ]
     feature_names = [
         "Gender", "Location", "Category",
-        "Class 8 %", "Class 9 %", "Class 10 %", "Class 11 %", "Class 12 %",
+        "Class 8 %", "Class 9 %", "Class 10 %", "Class 11 %", "Class 12 %","CGPA",
         "Academic Score",
         "Parents Income", "Age",
     ]
@@ -246,6 +248,7 @@ def train(data_path: str = DATA_PATH, weights=None, category_bonuses=None):
             "class_10_pct": {"min": round(float(df["class_10_pct"].min()), 2), "max": round(float(df["class_10_pct"].max()), 2), "mean": round(float(df["class_10_pct"].mean()), 2)},
             "class_11_pct": {"min": round(float(df["class_11_pct"].min()), 2), "max": round(float(df["class_11_pct"].max()), 2), "mean": round(float(df["class_11_pct"].mean()), 2)},
             "class_12_pct": {"min": round(float(df["class_12_pct"].min()), 2), "max": round(float(df["class_12_pct"].max()), 2), "mean": round(float(df["class_12_pct"].mean()), 2)},
+            "CGPA_pct": {"min": round(float(df["CGPA_pct"].min()), 2), "max": round(float(df["CGPA_pct"].max()), 2), "mean": round(float(df["CGPA_pct"].mean()), 2)},
             "academic_score": {"min": round(float(df["academic_score"].min()), 2), "max": round(float(df["academic_score"].max()), 2), "mean": round(float(df["academic_score"].mean()), 2)},
             "income": {"min": int(df["Parents_Income"].min()), "max": int(df["Parents_Income"].max()), "mean": round(float(df["Parents_Income"].mean()), 0)},
             "age":    {"min": int(df["Age"].min()),            "max": int(df["Age"].max()),            "mean": round(float(df["Age"].mean()), 2)},
